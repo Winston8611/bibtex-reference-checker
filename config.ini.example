@@ -1,0 +1,37 @@
+# BibTeX Checker 配置文件示例
+# 复制此文件为 config.ini 并根据需要修改
+
+[search]
+# 搜索延迟范围（秒）
+min_delay = 2
+max_delay = 4
+
+# 是否使用无头浏览器
+headless = false
+
+# 最大重试次数
+max_retries = 3
+
+[comparison]
+# 需要排除的字段（不进行比对）
+excluded_fields = ID,ENTRYTYPE,title,note
+
+# 是否进行严格比对（false则忽略大小写和空格差异）
+strict_comparison = false
+
+[output]
+# 是否自动生成HTML报告
+auto_generate_html = false
+
+# HTML报告输出路径
+html_output_path = report.html
+
+# 是否保存更新日志
+save_update_log = true
+
+[backup]
+# 备份文件后缀
+backup_suffix = .backup
+
+# 是否保留多个备份（添加时间戳）
+keep_multiple_backups = true
