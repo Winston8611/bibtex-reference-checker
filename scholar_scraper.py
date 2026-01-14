@@ -36,9 +36,14 @@ class ScholarScraper:
         self.delay_range = delay_range
         self.driver = None
         self.logger = logging.getLogger(__name__)
+        self.images_enabled = False  # 跟踪图片是否已启用
         
-    def _init_driver(self):
-        """初始化Chrome WebDriver"""
+    def _init_driver(self, enable_images: bool = False):
+        """初始化Chrome WebDriver
+        
+        Args:
+            enable_images: 是否启用图片加载（用于验证码）
+        """
         chrome_options = Options()
         
         if self.headless:
@@ -50,9 +55,16 @@ class ScholarScraper:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # 禁用图片加载以加速
-        prefs = {"profile.managed_default_content_settings.images": 2}
-        chrome_options.add_experimental_option("prefs", prefs)
+        # 根据参数决定是否禁用图片
+        if not enable_images:
+            # 禁用图片加载以加速（正常搜索时）
+            prefs = {"profile.managed_default_content_settings.images": 2}
+            chrome_options.add_experimental_option("prefs", prefs)
+        else:
+            # 启用图片（遇到验证码时）
+            prefs = {"profile.managed_default_content_settings.images": 1}
+            chrome_options.add_experimental_option("prefs", prefs)
+            self.images_enabled = True
         
         service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -96,8 +108,27 @@ class ScholarScraper:
             
             # 检查是否遇到验证码
             if self._check_captcha():
-                self.logger.warning("CAPTCHA detected! Please solve it manually.")
-                input("Press Enter after solving CAPTCHA...")
+                if not self.images_enabled:
+                    self.logger.warning("CAPTCHA detected! Restarting browser with images enabled...")
+                    
+                    # 保存当前URL
+                    current_url = self.driver.current_url
+                    
+                    # 关闭当前driver
+                    self.driver.quit()
+                    
+                    # 用启用图片的配置重新初始化
+                    self._init_driver(enable_images=True)
+                    
+                    # 导航回验证码页面
+                    self.driver.get(current_url)
+                    time.sleep(2)  # 等待页面和图片加载
+                    
+                    self.logger.warning("Browser restarted with images enabled. CAPTCHA should now be visible.")
+                else:
+                    self.logger.warning("CAPTCHA detected!")
+                
+                input("Please solve the CAPTCHA and press Enter...")
             
             self._random_delay()
             
